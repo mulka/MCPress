@@ -57,10 +57,9 @@ Edit `.env` with your Supabase credentials:
 
 ```
 SUPABASE_URL=https://your-project-id.supabase.co
-SUPABASE_KEY=your-supabase-service-role-key
+SUPABASE_SERVICE_KEY=your-supabase-service-role-key
+SUPABASE_ANON_KEY=your-supabase-anon-key
 ```
-
-**Note:** Use the service role key from Settings > API > Service role secret.
 
 ## Installation
 
@@ -88,10 +87,9 @@ SUPABASE_KEY=your-supabase-service-role-key
 
    ```
    SUPABASE_URL=https://your-project.supabase.co
-   SUPABASE_KEY=your-supabase-service-role-key
+   SUPABASE_SERVICE_KEY=your-supabase-service-role-key
+   SUPABASE_ANON_KEY=your-supabase-anon-key
    ```
-
-   **Use the service role key** from Settings > API > Service role secret.
 
 ## Running the Server
 
@@ -150,14 +148,12 @@ Add to your Claude Desktop configuration (`claude_desktop_config.json`):
       "cwd": "/path/to/MCPress/mcp-server",
       "env": {
         "SUPABASE_URL": "https://your-project.supabase.co",
-        "SUPABASE_KEY": "your-service-role-key"
+        "SUPABASE_SERVICE_KEY": "your-service-role-key"
       }
     }
   }
 }
 ```
-
-**Note:** Use the service role key from Supabase Settings > API > Service role secret.
 
 ### Cursor
 
