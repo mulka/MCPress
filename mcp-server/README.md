@@ -13,6 +13,55 @@ An MCP (Model Context Protocol) server that provides AI agents with access to jo
 - Python 3.10+
 - A Supabase project with the articles table and search function configured
 
+## Supabase Setup
+
+### Create a Supabase Project
+
+1. Go to [supabase.com](https://supabase.com) and sign up or sign in
+2. Click "New Project" to create a new project
+3. Select your organization (or create one if needed)
+4. Enter a name for your project (e.g., "mcpress")
+5. Set a database password and click "Create new project"
+6. Wait for the project to finish setting up (this may take a minute)
+
+### Get Your Supabase URL and Key
+
+1. In your Supabase dashboard, go to **Project Settings** (gear icon in the sidebar)
+2. Click on **API** under the Configuration section
+3. You'll find:
+   - **Project URL**: Looks like `https://abc123xyz456.supabase.co`
+   - **anon public key**: Safe for client-side use, respects RLS policies
+   - **Service role secret**: Bypasses Row Level Security, for server-side use only
+
+4. Click "Reveal" to show the service role secret key
+
+### Which Key Should You Use?
+
+**For this MCP server, always use the `service_role` key.**
+
+The server needs full database access to perform semantic search operations, which requires bypassing Row Level Security policies. The service role key provides this access but should never be used in client-side code or exposed publicly.
+
+**Key types explained:**
+- **anon key**: Safe for client-side applications, enforces RLS policies
+- **service_role key**: Full database access, bypasses RLS - server-side only
+
+### Configure Environment Variables
+
+Copy the example environment file and add your credentials:
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` with your Supabase credentials:
+
+```
+SUPABASE_URL=https://your-project-id.supabase.co
+SUPABASE_KEY=your-supabase-service-role-key
+```
+
+**Note:** Use the service role key from Settings > API > Service role secret.
+
 ## Installation
 
 1. Navigate to the mcp-server directory:
@@ -41,6 +90,8 @@ An MCP (Model Context Protocol) server that provides AI agents with access to jo
    SUPABASE_URL=https://your-project.supabase.co
    SUPABASE_KEY=your-supabase-service-role-key
    ```
+
+   **Use the service role key** from Settings > API > Service role secret.
 
 ## Running the Server
 
@@ -99,12 +150,14 @@ Add to your Claude Desktop configuration (`claude_desktop_config.json`):
       "cwd": "/path/to/MCPress/mcp-server",
       "env": {
         "SUPABASE_URL": "https://your-project.supabase.co",
-        "SUPABASE_KEY": "your-key"
+        "SUPABASE_KEY": "your-service-role-key"
       }
     }
   }
 }
 ```
+
+**Note:** Use the service role key from Supabase Settings > API > Service role secret.
 
 ### Cursor
 
