@@ -11,7 +11,7 @@ from mcpress.config import get_settings
 def get_supabase_client():
     """Get a Supabase client instance."""
     settings = get_settings()
-    return create_client(settings.supabase_url, settings.supabase_key)
+    return create_client(settings.supabase_url, settings.supabase_service_key)
 
 
 def register_tools(mcp: FastMCP) -> None:
@@ -31,17 +31,10 @@ def register_tools(mcp: FastMCP) -> None:
         Returns:
             List of matching articles with title, summary, author, and metadata
         """
-        client = get_supabase_client()
-
-        # Call the Supabase RPC function for vector similarity search
-        # This assumes a function named 'search_articles' exists in Supabase
-        # that takes a query embedding and returns matching articles
-        result = client.rpc(
-            "search_articles",
-            {"query_text": query, "match_limit": limit},
-        ).execute()
-
-        return result.data if result.data else []
+        # Vector search is not yet implemented.
+        # To enable, add OpenAI embedding support and create a Supabase RPC function
+        # for cosine similarity search against the article_embeddings table.
+        return []
 
     @mcp.tool
     def get_article(article_id: str) -> dict[str, Any] | None:
@@ -58,13 +51,44 @@ def register_tools(mcp: FastMCP) -> None:
 
         result = (
             client.table("articles")
-            .select("*")
+            .select(
+                "id, url, title, author, published_date, content, summary, keywords, "
+                "category_id, organization_id, image_url, created_at, updated_at, "
+                "categories(name), organizations(name)"
+            )
             .eq("id", article_id)
             .single()
             .execute()
         )
 
-        return result.data
+        if not result.data:
+            return None
+
+        article = result.data
+
+        # Flatten the nested category and organization objects
+        flattened = {
+            "id": article["id"],
+            "url": article["url"],
+            "title": article["title"],
+            "author": article["author"],
+            "published_date": article["published_date"],
+            "content": article["content"],
+            "summary": article["summary"],
+            "keywords": article["keywords"],
+            "category_id": article["category_id"],
+            "organization_id": article["organization_id"],
+            "image_url": article["image_url"],
+            "created_at": article["created_at"],
+            "updated_at": article["updated_at"],
+        }
+        # Include category and organization names if available
+        if article.get("categories") and article["categories"].get("name"):
+            flattened["category"] = article["categories"]["name"]
+        if article.get("organizations") and article["organizations"].get("name"):
+            flattened["media_source"] = article["organizations"]["name"]
+
+        return flattened
 
     @mcp.tool
     def list_articles(
@@ -89,21 +113,85 @@ def register_tools(mcp: FastMCP) -> None:
         """
         client = get_supabase_client()
 
+        # Build the query with proper column names from the schema
         query = client.table("articles").select(
-            "id, title, summary, author, category, media_source, published_at, url"
+            "id, url, title, author, published_date, content, summary, keywords, "
+            "category_id, organization_id, image_url, created_at, updated_at, "
+            "categories(name), organizations(name)"
         )
 
+        # First resolve category name to category_id if filtering by category
+        category_id = None
         if category:
-            query = query.eq("category", category)
+            cat_result = (
+                client.table("categories")
+                .select("id")
+                .eq("name", category)
+                .single()
+                .execute()
+            )
+            if cat_result.data:
+                category_id = cat_result.data["id"]
+            else:
+                # No matching category found, return empty list
+                return []
+
+        # First resolve organization name to organization_id if filtering by media_source
+        organization_id = None
         if media_source:
-            query = query.eq("media_source", media_source)
+            org_result = (
+                client.table("organizations")
+                .select("id")
+                .eq("name", media_source)
+                .single()
+                .execute()
+            )
+            if org_result.data:
+                organization_id = org_result.data["id"]
+            else:
+                # No matching organization found, return empty list
+                return []
+
+        # Apply filters
+        if category_id:
+            query = query.eq("category_id", category_id)
+        if organization_id:
+            query = query.eq("organization_id", organization_id)
         if author:
             query = query.eq("author", author)
 
         result = (
-            query.order("published_at", desc=True)
+            query.order("published_date", desc=True)
             .range(offset, offset + limit - 1)
             .execute()
         )
 
-        return result.data if result.data else []
+        if not result.data:
+            return []
+
+        # Flatten the nested category and organization objects
+        articles = []
+        for article in result.data:
+            flattened = {
+                "id": article["id"],
+                "url": article["url"],
+                "title": article["title"],
+                "author": article["author"],
+                "published_date": article["published_date"],
+                "content": article["content"],
+                "summary": article["summary"],
+                "keywords": article["keywords"],
+                "category_id": article["category_id"],
+                "organization_id": article["organization_id"],
+                "image_url": article["image_url"],
+                "created_at": article["created_at"],
+                "updated_at": article["updated_at"],
+            }
+            # Include category and organization names if available
+            if article.get("categories") and article["categories"].get("name"):
+                flattened["category"] = article["categories"]["name"]
+            if article.get("organizations") and article["organizations"].get("name"):
+                flattened["media_source"] = article["organizations"]["name"]
+            articles.append(flattened)
+
+        return articles
