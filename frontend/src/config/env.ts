@@ -16,6 +16,8 @@ export const env = {
     mcpServerTransport: process.env.MCP_SERVER_TRANSPORT || "sse",
     // Backend API configuration
     apiUrl: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000",
+    // Mock mode for testing without backend
+    useMock: process.env.NEXT_PUBLIC_USE_MOCK === "true",
 };
 
 // Simple validation to ensure required environment variables are set

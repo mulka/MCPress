@@ -1,31 +1,51 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AddArticleForm } from '@/components/portal/AddArticleForm';
 import { ArticleCard } from '@/components/portal/ArticleCard';
 import { Article } from '@/types/article';
-import { ExtractionResult } from '@/types/article';
+import { ExtractionResult, SaveArticleData } from '@/types/article';
 import { Button } from '@/components/ui/Button';
+import { articleAPI } from '@/services/api/articles';
+import { env } from '@/config/env';
 
 type ViewMode = 'articles' | 'add';
 
 export const ArticlePortal: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('articles');
-  const [articles] = useState<Article[]>([]);
+  const [articles, setArticles] = useState<Article[]>([]);
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+
+  // Load mock articles on mount if in mock mode
+  useEffect(() => {
+    if (env.useMock) {
+      articleAPI.getArticles().then(mockArticles => {
+        setArticles(mockArticles);
+      });
+    }
+  }, []);
 
   const handleArticleExtracted = (result: ExtractionResult) => {
     console.log('Article extracted:', result);
   };
 
-  const handleArticleSaved = () => {
-    setShowSuccess(true);
-    setSuccessMessage('Article saved successfully!');
-    setTimeout(() => {
-      setShowSuccess(false);
-    }, 3000);
-    setViewMode('articles');
+  const handleArticleSaved = async (data: SaveArticleData) => {
+    try {
+      await articleAPI.saveArticle(data);
+      setShowSuccess(true);
+      setSuccessMessage('Article saved successfully!');
+      setTimeout(() => {
+        setShowSuccess(false);
+      }, 3000);
+      setViewMode('articles');
+
+      // Refresh articles list
+      const updatedArticles = await articleAPI.getArticles();
+      setArticles(updatedArticles);
+    } catch (error) {
+      console.error('Failed to save article:', error);
+    }
   };
 
   const handleAddClick = () => {
@@ -46,6 +66,11 @@ export const ArticlePortal: React.FC = () => {
               <h1 className="text-2xl font-extrabold text-zinc-900 dark:text-white tracking-tight">
                 MCPress <span className="text-blue-600">Portal</span>
               </h1>
+              {env.useMock && (
+                <span className="px-2 py-1 text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded-full">
+                  MOCK MODE
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-4">
               {viewMode === 'articles' && (
@@ -139,6 +164,9 @@ export const ArticlePortal: React.FC = () => {
 
       {/* Footer */}
       <footer className="py-8 text-center text-zinc-500 dark:text-zinc-600 text-sm">
+        {env.useMock && (
+          <span className="block mb-2">Running in mock mode - data is simulated</span>
+        )}
         © 2026 MCPress. All rights reserved.
       </footer>
     </div>
