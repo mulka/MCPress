@@ -13,13 +13,11 @@ from sqlalchemy import (
     func,
 )
 from sqlalchemy.dialects.postgresql import UUID, ARRAY
-from sqlalchemy.orm import relationship
-
-from app.database.connection import async_engine
-from sqlalchemy import Column, DateTime, Text, UniqueConstraint
+from pgvector.sqlalchemy import Vector as VECTOR
+from sqlalchemy.orm import relationship, DeclarativeBase
 
 
-class Base:
+class Base(DeclarativeBase):
     """Base class for all models."""
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
@@ -91,14 +89,10 @@ class ArticleEmbedding(Base):
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     article_id = Column(UUID(as_uuid=True), ForeignKey("public.articles.id", ondelete="CASCADE"), nullable=False, unique=True)
-    embedding = Column(ARRAY(Text), nullable=False)  # Stored as array of floats for JSON compatibility
+    embedding = Column(VECTOR(1536), nullable=False)  # 1536 dimensions for text-embedding-3-small
     
     # Relationships
     article = relationship("Article", back_populates="embedding")
     
     def __repr__(self) -> str:
         return f"<ArticleEmbedding(id={self.id}, article_id={self.article_id})>"
-
-
-# Import Base from the models module to make it available
-from app.models.database import Base

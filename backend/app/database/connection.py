@@ -10,7 +10,10 @@ from sqlalchemy.orm import sessionmaker, Session
 from app.config import settings
 
 # SSL context for Supabase (required for db.*.supabase.co)
+# Supabase uses self-signed certificates, so we disable verification
 _ssl_context = ssl.create_default_context()
+_ssl_context.check_hostname = False
+_ssl_context.verify_mode = ssl.CERT_NONE
 
 
 # Synchronous engine (for migrations and legacy code)
